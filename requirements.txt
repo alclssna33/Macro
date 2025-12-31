@@ -5,6 +5,6 @@ plotly>=5.17.0
 pandas>=2.0.0
 gspread>=5.12.0
 google-auth>=2.23.0
-FinanceDataReader>=1.0.0
+financeDataReader>=1.0.0
 # tvdatafeed를 GitHub 주소로 기입
 tvdatafeed @ git+https://github.com/rongardF/tvdatafeed.git
