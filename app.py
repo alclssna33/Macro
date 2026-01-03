@@ -747,16 +747,23 @@ def get_ticker_data(ticker_symbol, period="1y", cache_key=None):
                 ticker_symbol = parts[1]  # KR10Y로 변경하여 FDR 사용
                 print(f"[Fallback] TradingView 미사용, FDR로 시도: {ticker_symbol}")
     
-    # 한국 국채 티커 확인 (KR로 시작하고 숫자로 끝나는 패턴)
+    # 한국 국채 티커 확인 (KR로 시작하고 숫자로 끝나는 패턴) 또는 한국 주요 지수
     is_korean_bond = ticker_symbol.startswith('KR') and len(ticker_symbol) >= 3
+    is_korean_index = ticker_symbol in ['^KS11', '^KQ11']
     
-    if is_korean_bond:
+    if is_korean_bond or is_korean_index:
         # FinanceDataReader 사용
         try:
+            # 심볼 변환 (yfinance -> FDR)
+            target_symbol = ticker_symbol
+            if is_korean_index:
+                # ^KS11 -> KS11, ^KQ11 -> KQ11
+                target_symbol = ticker_symbol.replace('^', '')
+            
             start_date, end_date = _period_to_dates(period)
             
             # FinanceDataReader로 데이터 가져오기
-            df = fdr.DataReader(ticker_symbol, start_date, end_date)
+            df = fdr.DataReader(target_symbol, start_date, end_date)
             
             if df.empty:
                 raise ValueError(f"FDR: {ticker_symbol}에 대한 데이터가 없습니다")
