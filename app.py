@@ -72,17 +72,29 @@ def get_gsheets_client():
     try:
         # secrets.toml에서 서비스 계정 정보 읽기
         if 'gsheets' in st.secrets:
-            creds_info = st.secrets['gsheets']
+            # 디버깅: 비밀 키 값은 제외하고 어떤 키들이 있는지 확인
+            creds_info = dict(st.secrets['gsheets'])
+            # st.write(f"Debug: Found keys in secrets: {list(creds_info.keys())}")
+            
+            # private_key 형식 보정 (줄바꿈 문자가 제대로 처리되지 않았을 경우 대비)
+            if 'private_key' in creds_info:
+                pk = creds_info['private_key']
+                # 만약 문자열에 실제 줄바꿈이 없고 \n 문자만 있다면 치환 (일반적인 실수 방지)
+                if "\\n" in pk and "\n" not in pk:
+                    creds_info['private_key'] = pk.replace("\\n", "\n")
+
             scope = ['https://spreadsheets.google.com/feeds',
                     'https://www.googleapis.com/auth/drive']
             creds = Credentials.from_service_account_info(creds_info, scopes=scope)
             client = gspread.authorize(creds)
             return client
         else:
-            # 서비스 계정이 없으면 None 반환 (공개 시트는 다른 방법 필요)
+            st.error("secrets에 [gsheets] 섹션이 없습니다.")
             return None
     except Exception as e:
-        st.error(f"구글 시트 연결 오류: {str(e)}")
+        import traceback
+        st.error(f"구글 시트 연결 오류 상세: {str(e)}")
+        st.code(traceback.format_exc())
         return None
 
 gsheets_client = get_gsheets_client()
