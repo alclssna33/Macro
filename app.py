@@ -763,10 +763,30 @@ def get_ticker_data(ticker_symbol, period="1y", cache_key=None):
             start_date, end_date = _period_to_dates(period)
             
             # FinanceDataReader로 데이터 가져오기
-            df = fdr.DataReader(target_symbol, start_date, end_date)
+            try:
+                df = fdr.DataReader(target_symbol, start_date, end_date)
+            except Exception:
+                df = pd.DataFrame()
             
             if df.empty:
-                raise ValueError(f"FDR: {ticker_symbol}에 대한 데이터가 없습니다")
+                # FDR 실패 시 yfinance로 재시도 (한국 지수인 경우만)
+                if is_korean_index:
+                    print(f"[Fallback] FDR 데이터 없음, yfinance로 재시도: {ticker_symbol}")
+                    # yfinance 로직으로 넘어가기 위해 None 반환하거나 예외 발생
+                    # 여기서는 아래 예외 처리 블록으로 이동시키지 않고 직접 yfinance 호출
+                    try:
+                        import yfinance as yf
+                        ticker = yf.Ticker(ticker_symbol) # 원래 심볼 사용 (^KS11 등)
+                        hist = ticker.history(period=period)
+                        if not hist.empty:
+                            df = hist
+                            # yfinance 데이터는 'Close' 컬럼이 있으므로 그대로 사용 가능
+                        else:
+                            raise ValueError(f"yfinance 재시도 실패: {ticker_symbol}")
+                    except Exception as e:
+                        raise ValueError(f"FDR 및 yfinance 모두 실패: {ticker_symbol} - {str(e)}")
+                else:
+                    raise ValueError(f"FDR: {ticker_symbol}에 대한 데이터가 없습니다")
             
             # 데이터 포맷 표준화 (yfinance 형식과 동일하게)
             # FDR은 보통 Date를 인덱스로 사용하거나 별도 컬럼으로 가짐
